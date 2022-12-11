@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const CatBreedSchema = new mongoose.Schema({
     breed: {
@@ -11,4 +11,8 @@ const CatBreedSchema = new mongoose.Schema({
     pattern: String
 });
 
-module.exports = mongoose.model('CatBreed', CatBreedSchema);
+const CatBreeds = mongoose.model('CatBreed', CatBreedSchema);
+
+export {
+    CatBreeds
+};

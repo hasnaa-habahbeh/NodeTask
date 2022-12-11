@@ -1,24 +1,48 @@
-const CatBreeds = require('../database/CatBreedsModel');
-const seedCatBreeds = require('../database/catBreedsSeeder');
+import { CatBreeds } from './CatBreedsModel.js';
 
-exports.seedCatBreeds = async (req, res) => {
-    await seedCatBreeds();
+export const seedCatBreeds = async (req, res) => {
+    const apiUrl = process.env.API_URL;
+
+    try {
+        const apiRes = await fetch(apiUrl);
+        const jsonRes = await apiRes.json();
+        const apiData = jsonRes.data;
+
+        apiData.forEach(apiCatBreed => {
+            let catBreed = new CatBreed({
+                breed: apiCatBreed.breed,
+                country: apiCatBreed.country,
+                origin: apiCatBreed.origin,
+                coat: apiCatBreed.coat,
+                pattern: apiCatBreed.pattern
+            });
+            catBreed.save();
+        });
+    } catch (error) {
+        console.error(error);
+    }
+
     res.status(200).json({
         status: 'success',
         message: 'Seeded DB successfully'
     });
 }
 
-exports.matchByBreed = async (req, res) => {
+export const notFound = async (req, res) => {
+    return res.status(404).json({
+        status: 'fail',
+        message: 'Page not found!',
+    });
+}
+
+export const matchByBreed = async (req, res, next) => {
     const breed = new RegExp(req.query.breed);
 
     const result = await CatBreeds.find({ breed: { $regex: breed } });
 
     if (!result.length) {
-        return res.status(404).json({
-            status: 'fail',
-            message: 'cant find breed in DB!',
-        });
+        res.redirect(307, '/not-found');
+        return next();
     }
 
     res.status(200).json({
@@ -27,7 +51,7 @@ exports.matchByBreed = async (req, res) => {
     });
 }
 
-exports.getCatBreeds = async (req, res) => {
+export const getCatBreeds = async (req, res) => {
     const limit = 10;
     const result = await CatBreeds.find({}).limit(limit);
 
@@ -37,17 +61,15 @@ exports.getCatBreeds = async (req, res) => {
     });
 }
 
-exports.getCatBreed = async (req, res) => {
+export const getCatBreed = async (req, res, next) => {
     const breedParam = req.params.breed;
     const modifiedBreedParam = breedParam.replace('_', ' ');
 
     const result = await CatBreeds.find({ breed: modifiedBreedParam } );
 
     if (!result.length) {
-        return res.status(404).json({
-            status: 'fail',
-            message: 'cant find cat breed in DB!',
-        });
+        res.redirect(307, '/not-found');
+        return next();
     }
 
     res.status(200).json({
@@ -56,8 +78,15 @@ exports.getCatBreed = async (req, res) => {
     });
 }
 
-exports.addCatBreed = async (req, res) => {
+export const addCatBreed = async (req, res) => {
     const { breed = '', country = '', origin = '', coat = '', pattern = '' } = req.body;
+
+    if(!breed) {
+        return res.status(400).json({
+            status: 'fail',
+            message: 'can\t process you request!'
+        });
+    }
 
     const newCatBreed = new CatBreeds({
         breed,
@@ -66,17 +95,15 @@ exports.addCatBreed = async (req, res) => {
         coat,
         pattern,
     });
-    newCatBreed.save();
-
-    const result = await CatBreeds.find({ breed: newCatBreed.breed });
+    const result = await newCatBreed.save();
 
     res.status(201).json({
         status: 'success',
-        message: result[0],
+        message: result,
     });
 }
 
-exports.editCatBreed = async (req, res) => {
+export const editCatBreed = async (req, res, next) => {
     const breedParam = req.params.breed;
     const updatedData = req.body;
     const modifiedBreedParam = breedParam.replace('_', ' ');
@@ -85,12 +112,10 @@ exports.editCatBreed = async (req, res) => {
         { breed: modifiedBreedParam },
         updatedData
     );
-    
+
     if (!dbCatBreed?.breed) {
-        res.status(404).json({
-            status: 'fail',
-            message: 'cant edit a cat breed that doesn\'t exist!',
-        });
+        res.redirect(307, '/not-found');
+        return next();
     }
 
     const result = await CatBreeds.findOne({ breed: modifiedBreedParam });
@@ -101,7 +126,7 @@ exports.editCatBreed = async (req, res) => {
     });
 }
 
-exports.removeCatBreed = async (req, res) => {
+export const removeCatBreed = async (req, res) => {
     const breedParam = req.params.breed;
     const modifiedBreedParam = breedParam.replace('_', ' ');
 
