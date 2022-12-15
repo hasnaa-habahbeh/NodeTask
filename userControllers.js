@@ -38,15 +38,13 @@ export const addUser = async (req, res) => {
     });
 };
 
-export const getUser = async (req, res) => {
+export const getUser = async (req, res, next) => {
     const user = req.body;
     const userFromDB = await getUserData(user.username);
 
     if (!userFromDB.length) {
-        return res.status(401).json({
-            status: 'fail',
-            message: 'doesn\'t exist, need to register'
-        });
+        res.redirect(401, '/signup');
+        return next();
     }
 
     const isCorrectPassword = user.password === userFromDB[0].password;
