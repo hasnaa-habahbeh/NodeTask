@@ -2,7 +2,6 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { expressjwt } from 'express-jwt';
 import {
     seedCatBreeds,
     matchByBreed,
@@ -24,17 +23,6 @@ dotenv.config({ path: './config.env' });
 server.use(express.json());
 server.options('*', cors());
 
-// JWT
-export const secret = process.env.SECRET;
-server.use(expressjwt({
-    secret: secret,
-    credentialsRequired: false,
-    algorithms: ['RS256'] }).unless({
-    path: [
-        '/signup'
-    ]
-}));
-
 // Routes:
 server.get('/not-found', notFound);
 server.get('/fetch', seedCatBreeds);
@@ -50,6 +38,7 @@ server.post('/login', getUser);
 
 const PORT = process.env.PORT || 3001;
 const DB = process.env.DATABASE.replace('<PASSWORD>', process.env.DATABASE_PASSWORD);
+export const secret = process.env.SECRET;
 
 mongoose.connect(DB).then(connection => {
     console.log('connected to DB');
