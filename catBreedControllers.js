@@ -8,7 +8,7 @@ export const seedCatBreeds = async (req, res) => {
 
         const apiData = jsonRes.data;
 
-        apiData.map(apiCatBreed => new CatBreeds({
+        const dbApiData = apiData.map(apiCatBreed => new CatBreeds({
             breed: apiCatBreed.breed,
             country: apiCatBreed.country,
             origin: apiCatBreed.origin,
@@ -16,15 +16,18 @@ export const seedCatBreeds = async (req, res) => {
             pattern: apiCatBreed.pattern
         }));
 
-        CatBreeds.insertMany(apiData);
-    } catch (error) {
-        console.error(error);
-    }
+        await CatBreeds.insertMany(dbApiData);
 
-    res.status(200).json({
-        status: 'success',
-        message: 'Seeded DB successfully'
-    });
+        return res.status(200).json({
+            status: 'success',
+            message: 'Seeded DB successfully'
+        });
+    } catch (error) {
+        return res.status(500).json({
+            status: 'failed',
+            message: error
+        });
+    }
 }
 
 export const notFound = async (req, res) => {
@@ -34,7 +37,7 @@ export const notFound = async (req, res) => {
     });
 }
 
-export const matchByBreed = async (req, res, next) => {
+export const matchByBreed = async (req, res) => {
     const breed = new RegExp(req.query.breed);
 
     const result = await CatBreeds.find({ breed: { $regex: breed } });
@@ -68,15 +71,14 @@ export const getCatBreeds = async (req, res) => {
     });
 }
 
-export const getCatBreed = async (req, res, next) => {
+export const getCatBreed = async (req, res) => {
     const breedParam = req.params.breed;
     const modifiedBreedParam = breedParam.replace('_', ' ');
 
     const result = await CatBreeds.find({ breed: modifiedBreedParam } );
 
     if (!result.length) {
-        res.redirect(307, '/not-found');
-        return next();
+        return res.redirect(307, '/not-found');
     }
 
     res.status(200).json({
@@ -86,7 +88,7 @@ export const getCatBreed = async (req, res, next) => {
 }
 
 export const addCatBreed = async (req, res) => {
-    const { breed = '', country = '', origin = '', coat = '', pattern = '' } = req.body;
+    const { breed, country = '', origin = '', coat = '', pattern = '' } = req.body;
 
     if(!breed) {
         return res.status(400).json({
@@ -110,7 +112,7 @@ export const addCatBreed = async (req, res) => {
     });
 }
 
-export const editCatBreed = async (req, res, next) => {
+export const editCatBreed = async (req, res) => {
     const breedParam = req.params.breed;
     const updatedData = req.body;
     const modifiedBreedParam = breedParam.replace('_', ' ');
@@ -120,9 +122,8 @@ export const editCatBreed = async (req, res, next) => {
         updatedData
     );
 
-    if (!dbCatBreed?.breed) {
-        res.redirect(307, '/not-found');
-        return next();
+    if (!dbCatBreed) {
+        return res.redirect(307, '/not-found');
     }
 
     res.status(200).json({

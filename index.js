@@ -1,7 +1,7 @@
 import express from 'express';
+import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import cors from 'cors';
 import {
     seedCatBreeds,
     matchByBreed,
@@ -15,33 +15,45 @@ import {
 import {
     getUser,
     addUser,
-    logout
 } from './userControllers.js';
 
 const server = express();
 
 dotenv.config({ path: './config.env' });
 server.use(express.json());
-server.options('*', cors());
-
-// Routes:
-server.get('/not-found', notFound);
-server.get('/fetch', seedCatBreeds);
-server.get('/match', matchByBreed);
-server.get('/:breed', getCatBreed);
-server.put('/:breed', editCatBreed);
-server.delete('/:breed', removeCatBreed);
-server.get('/', getCatBreeds);
-server.post('/', addCatBreed);
-
-server.post('/signup', addUser);
-server.post('/login', getUser);
-server.post('/logout', logout);
 
 const PORT = process.env.PORT || 3001;
 const DB = process.env.DATABASE.replace('<PASSWORD>', process.env.DATABASE_PASSWORD);
 export const secret = process.env.SECRET;
 export const apiUrl = process.env.API_URL;
+
+const verifyToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token) {
+        jwt.verify(token, secret);
+        next();
+    } else {
+        return res.json({
+            status: 'Forbidden',
+            message: 'not verified'
+        })
+    }
+}
+
+// Routes:
+server.get('/not-found', verifyToken, notFound);
+server.get('/fetch', verifyToken, seedCatBreeds);
+server.get('/match', verifyToken, matchByBreed);
+server.get('/:breed', verifyToken, getCatBreed);
+server.put('/:breed', verifyToken, editCatBreed);
+server.delete('/:breed', verifyToken, removeCatBreed);
+server.get('/', verifyToken, getCatBreeds);
+server.post('/', verifyToken, addCatBreed);
+
+server.post('/signup', addUser);
+server.post('/login', getUser);
 
 mongoose.connect(DB).then(connection => {
     console.log('connected to DB');

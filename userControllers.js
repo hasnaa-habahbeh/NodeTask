@@ -10,7 +10,7 @@ export const addUser = async (req, res) => {
     const { username, password, country } = req.body;
 
     const userFromDB = await getUserData(username);
-    if (userFromDB.length) {
+    if (userFromDB) {
         return res.status(401).json({
             status: 'fail',
             message: 'already exists in DB!'
@@ -22,18 +22,14 @@ export const addUser = async (req, res) => {
         password,
         country
     };
-    const token = jwt.sign(user, secret);
 
-    const newUser = new User({
-       ...user,
-    });
-    const result = await newUser.save();
+    const newUser = new User(user);
+    await newUser.save();
+
+    const token = jwt.sign(user, secret); // in case any db errors happened
 
     return res.status(200).json({
         status: 'success',
-        message: {
-            ...result._doc,
-        },
         token
     });
 };
@@ -42,12 +38,12 @@ export const getUser = async (req, res, next) => {
     const user = req.body;
     const userFromDB = await getUserData(user.username);
 
-    if (!userFromDB.length) {
+    if (!userFromDB) {
         res.redirect(302, '/signup');
         return next();
     }
 
-    const isCorrectPassword = user.password === userFromDB[0].password;
+    const isCorrectPassword = user.password === userFromDB.password;
     if (!isCorrectPassword) {
         return res.status(403).json({
             status: 'fail',
@@ -59,40 +55,6 @@ export const getUser = async (req, res, next) => {
 
     return res.status(200).json({
         status: 'success',
-        message: {
-            ...user,
-        },
         token
-    });
-}
-
-export const logout = async (req, res) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).json({
-            status: 'fail',
-            message: 'no token'
-        });
-    }
-
-    jwt.verify(token, secret, (err, user) => {
-        if (err) {
-            return res.status(403).json({
-                status: 'invalid',
-                message: 'token has expired, access denied'
-            })
-        }
-
-        jwt.sign(req.user, secret, {
-            expiresIn: '1'
-        });
-
-        return res.status(200).json({
-            status: 'success',
-            message: 'Logged out',
-            token
-        });
     });
 }
