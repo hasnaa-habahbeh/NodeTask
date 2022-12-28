@@ -1,23 +1,22 @@
 import { CatBreeds } from './CatBreedsModel.js';
+import { apiUrl } from './index.js';
 
 export const seedCatBreeds = async (req, res) => {
-    const apiUrl = process.env.API_URL;
-
     try {
-        const apiRes = await fetch(apiUrl);
+        const apiRes = await fetch(`${apiUrl}?limit=98`);
         const jsonRes = await apiRes.json();
+
         const apiData = jsonRes.data;
 
-        apiData.forEach(apiCatBreed => {
-            let catBreed = new CatBreed({
-                breed: apiCatBreed.breed,
-                country: apiCatBreed.country,
-                origin: apiCatBreed.origin,
-                coat: apiCatBreed.coat,
-                pattern: apiCatBreed.pattern
-            });
-            catBreed.save();
-        });
+        apiData.map(apiCatBreed => new CatBreeds({
+            breed: apiCatBreed.breed,
+            country: apiCatBreed.country,
+            origin: apiCatBreed.origin,
+            coat: apiCatBreed.coat,
+            pattern: apiCatBreed.pattern
+        }));
+
+        CatBreeds.insertMany(apiData);
     } catch (error) {
         console.error(error);
     }
@@ -40,11 +39,6 @@ export const matchByBreed = async (req, res, next) => {
 
     const result = await CatBreeds.find({ breed: { $regex: breed } });
 
-    if (!result.length) {
-        res.redirect(307, '/not-found');
-        return next();
-    }
-
     res.status(200).json({
         status: 'success',
         message: result,
@@ -52,10 +46,23 @@ export const matchByBreed = async (req, res, next) => {
 }
 
 export const getCatBreeds = async (req, res) => {
-    const limit = 10;
-    const result = await CatBreeds.find({}).limit(limit);
+    const limit = req.query.limit || 10;
+    const page = req.query.page || 1;
+    const skippingIndex = 25 * (page - 1);
 
-    res.status(200).json({
+    const apiRes = await fetch(apiUrl);
+    const apiLastPage = await apiRes.json().last_page;
+
+    if (page > apiLastPage) {
+        return res.status(404).json({
+            status: 'fail',
+            message: `Page doesn\'t exist, max pages number is ${apiLastPage} `,
+        });
+    }
+
+    const result = await CatBreeds.find({}).limit(limit).skip(skippingIndex);
+
+    return res.status(200).json({
         status: 'success',
         message: result,
     });
@@ -118,11 +125,9 @@ export const editCatBreed = async (req, res, next) => {
         return next();
     }
 
-    const result = await CatBreeds.findOne({ breed: modifiedBreedParam });
-
     res.status(200).json({
         status: 'success',
-        message: result
+        message: dbCatBreed
     });
 }
 

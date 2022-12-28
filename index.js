@@ -14,7 +14,8 @@ import {
 } from './catBreedControllers.js';
 import {
     getUser,
-    addUser
+    addUser,
+    logout
 } from './userControllers.js';
 
 const server = express();
@@ -35,10 +36,12 @@ server.post('/', addCatBreed);
 
 server.post('/signup', addUser);
 server.post('/login', getUser);
+server.post('/logout', logout);
 
 const PORT = process.env.PORT || 3001;
 const DB = process.env.DATABASE.replace('<PASSWORD>', process.env.DATABASE_PASSWORD);
 export const secret = process.env.SECRET;
+export const apiUrl = process.env.API_URL;
 
 mongoose.connect(DB).then(connection => {
     console.log('connected to DB');
